@@ -14,6 +14,10 @@ st.set_page_config(
         layout="wide",
     )
 
+@st.cache
+def convert_df(df):
+   return df.to_csv().encode('utf-8')
+
 st.title("F-70H Compressor Monitoring Dashboard")
 
 with st.expander("Overview"):
@@ -48,7 +52,7 @@ with figcol1:
 with figcol2:
     presFig = st.empty()
 
-download_data = pd.concat([temp, pres])
+download_data = convert_df(pd.concat([temp, pres]))
 st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
 
 bcol1, bcol2 = st.columns(2)
