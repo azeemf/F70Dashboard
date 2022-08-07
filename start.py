@@ -56,8 +56,7 @@ st.text(" ")
 st.text(" ")
 st.text(" ")
 
-download_data = convert_df(pd.concat([temp, pres]))
-st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
+downloadButton = st.empty()
 
 st.text(" ")
 st.text(" ")
@@ -105,6 +104,9 @@ while 1:
         pfig = px.line(display_pres, 'Time', 'Pres', width=500, markers={'color' : 'blue'})
         pfig.update_layout(yaxis_range=[50,500])
         st.write(pfig)
+
+    download_data = convert_df(pd.concat([temp, pres]))
+    downloadButton = st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
 
     sleep(1)
 
