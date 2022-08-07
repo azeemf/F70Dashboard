@@ -52,18 +52,18 @@ with figcol1:
 with figcol2:
     presFig = st.empty()
 
-st.markdown("***")
-st.markdown("***")
-st.markdown("***")
+st.text(" ")
+st.text(" ")
+st.text(" ")
 
 download_data = convert_df(pd.concat([temp, pres]))
 st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
 
 bcol1, bcol2 = st.columns(2)
 
-st.markdown("***")
-st.markdown("***")
-st.markdown("***")
+st.text(" ")
+st.text(" ")
+st.text(" ")
 
 with bcol1:
     st.text("Designed and Developed by")
