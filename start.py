@@ -74,6 +74,9 @@ with bcol2:
 
 # Start Of Loop
 
+raw_temp_data = 0
+raw_pres_data = 0
+
 while 1:
 
     prevTemp = raw_temp_data
