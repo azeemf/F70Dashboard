@@ -8,7 +8,12 @@ import numpy as np
 import pandas as pd
 from datetime import datetime as dt
 
-st.set_page_config(layout="wide")
+st.set_page_config(
+        page_title="F70 Dashboard",
+        page_icon="🌅",
+        layout="wide",
+    )
+
 st.title("F-70H Compressor Monitoring Dashboard")
 
 with st.expander("Overview"):
@@ -42,6 +47,17 @@ with figcol1:
     tempFig = st.empty()
 with figcol2:
     presFig = st.empty()
+
+download_data = pd.concat([temp, pres])
+st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
+
+bcol1, bcol2 = st.columns(2)
+
+with bcol1:
+    st.text("Designed and Developed by")
+    st.image("MBA Creations Logo.png")
+
+# Start Of Loop
 
 while 1:
     raw_temp_data = np.random.randint(0, 100)
