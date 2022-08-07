@@ -10,7 +10,7 @@ from datetime import datetime as dt
 
 st.set_page_config(
         page_title="F70 Dashboard",
-        page_icon="🌅",
+        page_icon="📈",
         layout="wide",
     )
 
@@ -86,10 +86,10 @@ while 1:
     raw_pres_data = np.random.randint(50, 500)
     timeh.text(str(dt.now()))
 
-    tempMetric.metric("Live Temp", raw_temp_data, delta=prevTemp - raw_temp_data)
+    tempMetric.metric("Live Temp", raw_temp_data, delta=raw_temp_data - prevTemp)
     avtempMetric.metric("Average Temp", temp.mean())
 
-    presMetric.metric("Live Pressure", raw_pres_data, delta=prevTemp - raw_pres_data)
+    presMetric.metric("Live Pressure", raw_pres_data, delta=raw_pres_data - prevPres)
     avgpresMetric.metric("Average Pressure", pres.mean())
 
     oimg.image('ocircle.png', width = 10)
