@@ -105,7 +105,7 @@ while 1:
         pfig.update_layout(yaxis_range=[50,500])
         st.write(pfig)
 
-    download_data = convert_df(pd.concat([temp, pres]))
+    download_data = convert_df(pd.concat([temp, pres], ignore_index=True))
     with downloadButton:
         st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
 
