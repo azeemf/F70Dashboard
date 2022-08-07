@@ -57,6 +57,10 @@ with bcol1:
     st.text("Designed and Developed by")
     st.image("MBA Creations Logo.png")
 
+with bcol2:
+    st.text("Partnered With")
+    st.image("ucll.png")
+
 # Start Of Loop
 
 while 1:
