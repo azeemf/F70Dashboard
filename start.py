@@ -106,7 +106,8 @@ while 1:
         st.write(pfig)
 
     download_data = convert_df(pd.concat([temp, pres]))
-    downloadButton = st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
+    with downloadButton:
+        st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
 
     sleep(1)
 
