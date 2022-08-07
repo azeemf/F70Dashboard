@@ -59,11 +59,11 @@ st.text(" ")
 download_data = convert_df(pd.concat([temp, pres]))
 st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
 
-bcol1, bcol2 = st.columns(2)
+st.text(" ")
+st.text(" ")
+st.text(" ")
 
-st.text(" ")
-st.text(" ")
-st.text(" ")
+bcol1, bcol2 = st.columns(2)
 
 with bcol1:
     st.text("Designed and Developed by")
