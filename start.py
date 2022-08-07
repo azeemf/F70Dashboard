@@ -75,14 +75,18 @@ with bcol2:
 # Start Of Loop
 
 while 1:
+
+    prevTemp = raw_temp_data
+    prevPres = raw_pres_data
+
     raw_temp_data = np.random.randint(0, 100)
     raw_pres_data = np.random.randint(50, 500)
     timeh.text(str(dt.now()))
 
-    tempMetric.metric("Live Temp", raw_temp_data)
+    tempMetric.metric("Live Temp", raw_temp_data, delta=prevTemp - raw_temp_data)
     avtempMetric.metric("Average Temp", temp.mean())
 
-    presMetric.metric("Live Pressure", raw_pres_data)
+    presMetric.metric("Live Pressure", raw_pres_data, delta=prevTemp - raw_pres_data)
     avgpresMetric.metric("Average Pressure", pres.mean())
 
     oimg.image('ocircle.png', width = 10)
