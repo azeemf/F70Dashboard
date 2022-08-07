@@ -20,6 +20,8 @@ def convert_df(df):
 
 st.title("F-70H Compressor Monitoring Dashboard")
 
+test = st.empty()
+
 with st.expander("Overview"):
 
     col1, col2 = st.columns(2)
