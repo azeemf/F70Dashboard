@@ -1,5 +1,4 @@
 from time import sleep
-from xml.dom.minidom import CharacterData
 import streamlit as st
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -7,6 +6,15 @@ import plotly.express as px
 import numpy as np
 import pandas as pd
 from datetime import datetime as dt
+import serial
+from helpers import rec_response
+import os
+import time
+
+global inCom
+print("Please Select COM Port Number")
+inCom = "COM" + input()
+print("Starting...")
 
 st.set_page_config(
         page_title="F70 Dashboard",
@@ -14,13 +22,86 @@ st.set_page_config(
         layout="wide",
     )
 
+def CheckSerial():
+    helcomp_serial_port = inCom
+    ser=serial.Serial()
+    ser.port=helcomp_serial_port
+    ser.baudrate=9600
+    ser.bytesize=serial.EIGHTBITS
+    ser.parity=serial.PARITY_NONE
+    ser.stopbits=1
+    ser.timeout=5
+    ser.xonxoff=0
+    try:
+        ser.open()
+        ser.close()
+        return True
+    except:
+        st.error("⛔ Serial Port Could Not Be Opened - Please Rerun")
+        return False
+
+def Read():
+
+    helcomp_serial_port = inCom # may need to change, if serial port number changes
+    path = os.path.dirname(os.path.abspath(__file__)) # relative directory path
+
+    # Create an instance of serial object, set serial parameters for Sumitomo F70L Helium Compressor
+    ser=serial.Serial()
+    ser.port=helcomp_serial_port
+    ser.baudrate=9600
+    ser.bytesize=serial.EIGHTBITS
+    ser.parity=serial.PARITY_NONE
+    ser.stopbits=1
+    ser.timeout=5
+    ser.xonxoff=0
+
+    # read data
+    ser.open()
+    # temperatures
+    sendstring = b"$TEAA4B9\r"
+    ser.flushInput()
+    ser.flushOutput()
+    ser.write(sendstring)
+    temperatures = rec_response(ser)
+    time.sleep(0.05) # pause to ensure readiness
+    print(temperatures)
+    temperatures = str(temperatures)
+    retList = [temperatures]
+
+    # pressures 
+    sendstring = b"$PRA95F7\r"
+    ser.flushInput()
+    ser.flushOutput()
+    ser.write(sendstring)
+    pressures = rec_response(ser)
+    time.sleep(0.05) # pause to ensure readiness
+    print(pressures)
+    pressures = str(pressures)
+    retList.append(pressures)
+
+    # status 
+    sendstring = b"$STA3504\r"
+    ser.flushInput()
+    ser.flushOutput()
+    ser.write(sendstring)
+    status = rec_response(ser)
+    time.sleep(0.05) # pause to ensure readiness
+    ser.close()
+
+    # interpret status bytes
+    print(status)
+
+    retList.append(status)
+
+    return retList
+
 @st.cache
 def convert_df(df):
    return df.to_csv().encode('utf-8')
 
 st.title("F-70H Compressor Monitoring Dashboard")
-
-test = st.empty()
+status = st.empty()
+status.write("Waiting...")
 
 with st.expander("Overview"):
 
@@ -30,29 +111,49 @@ with st.expander("Overview"):
         timeh = st.empty()
 
     with col2:
-        st.text("Online ")
-        oimg = st.empty()
+        oText = st.empty()    
+        if CheckSerial() == True:
+            oText = st.write("Online - " + inCom + ": 🟢")
+
+            serData = Read()
+            HelDis = int(serData[0][7:10])
+            WOut = int(serData[0][11:14])
+            WIn = int(serData[0][15:18])
+            pSig = int(serData[1][7:10])
+
+            dfHelDis = pd.DataFrame({'HelDis' : [HelDis], 'Time': [dt.now()]})
+            dfWIn = pd.DataFrame({'WIn' : [WIn], 'Time': [dt.now()]})
+            dfWOut = pd.DataFrame({'WOut' : [WOut], 'Time': [dt.now()]})
+            pres = pd.DataFrame({'pSig' : [pSig], 'Time': [dt.now()]})
+
+        else:
+            oText = st.write("Online - " + inCom + ": 🔴")
+            st.experimental_rerun()
 
 with st.sidebar:
 
     scol1, scol2 = st.columns(2)
 
     with scol1:
-        tempMetric = st.empty()
-        avtempMetric = st.empty()
+        HelDisMetric = st.empty()
+        avHelDisMetric = st.empty()
+        WIMetric = st.empty()
+        avWIMetric = st.empty()
     with scol2:
         presMetric = st.empty()
         avgpresMetric = st.empty()
-
-temp = pd.DataFrame({'Temp' : [np.random.randint(0, 100)], 'Time': [dt.now()]})
-pres = pd.DataFrame({'Pres' : [np.random.randint(50, 500)], 'Time': [dt.now()]})
+        WOMetric = st.empty()
+        avWOMetric = st.empty()
+    
 
 figcol1, figcol2 = st.columns(2)
 
 with figcol1:
     tempFig = st.empty()
+    WIFig = st.empty()
 with figcol2:
     presFig = st.empty()
+    WOFig = st.empty()
 
 st.text(" ")
 st.text(" ")
@@ -74,50 +175,74 @@ with bcol2:
     st.text("Partnered With")
     st.image("ucll.png")
 
+sWarning = st.empty()
+
 # Start Of Loop
 
-raw_temp_data = 0
-raw_pres_data = 0
-
 while 1:
+    status.write("Ready")
+    prevHelDis = HelDis
+    prevWOut = WOut
+    prevWIn = WIn
+    prevpSig = pSig
 
-    prevTemp = raw_temp_data
-    prevPres = raw_pres_data
+    serData = Read()
+    sWarning = st.empty()
+    print("out of read")
+    HelDis = int(serData[0][7:10])
+    WOut = int(serData[0][11:14])
+    WIn = int(serData[0][15:18])
+    pSig = int(serData[1][7:10])
 
-    raw_temp_data = np.random.randint(0, 100)
-    raw_pres_data = np.random.randint(50, 500)
     timeh.text(str(dt.now()))
 
-    tempMetric.metric("Live Temp", raw_temp_data, delta=raw_temp_data - prevTemp)
-    avtempMetric.metric("Average Temp", temp.mean())
+    HelDisMetric.metric("Live Helium Discharge Temp", value = str(HelDis) + " °C", delta=HelDis - prevHelDis)
+    avHelDisMetric.metric("Average Helium Discharge Temp", dfHelDis['HelDis'].mean())
 
-    presMetric.metric("Live Pressure", raw_pres_data, delta=raw_pres_data - prevPres)
-    avgpresMetric.metric("Average Pressure", pres.mean())
+    WOMetric.metric("Live Water Out Temp", value = str(WOut) + " °C", delta=WOut - prevWOut)
+    avWOMetric.metric("Average Water Out Temp", dfWOut['WOut'].mean())
 
-    oimg.image('ocircle.png', width = 10)
+    WIMetric.metric("Live Water In Temp", value = str(WIn) + " °C", delta=WIn - prevWIn)
+    avWIMetric.metric("Average Water In Temp", dfWIn['WIn'].mean())
 
-    temp_in_data = pd.DataFrame({'Temp' : [raw_temp_data], 'Time': [dt.now()]})
-    temp = pd.concat([temp, temp_in_data], ignore_index=True)
+    presMetric.metric("Live Pressure", value = str(pSig) + " PSI", delta=pSig - prevpSig)
+    avgpresMetric.metric("Average Pressure", pres['pSig'].mean())
 
-    pres_in_data = pd.DataFrame({'Pres' : [raw_pres_data], 'Time': [dt.now()]})
+    temp_in_data = pd.DataFrame({'HelDis' : [HelDis], 'Time': [dt.now()]})
+    dfHelDis = pd.concat([dfHelDis, temp_in_data], ignore_index=True)
+
+    temp_in_data = pd.DataFrame({'WIn' : [WIn], 'Time': [dt.now()]})
+    dfWIn = pd.concat([dfWIn, temp_in_data], ignore_index=True)
+
+    temp_in_data = pd.DataFrame({'WOut' : [WOut], 'Time': [dt.now()]})
+    dfWOut = pd.concat([dfWOut, temp_in_data], ignore_index=True)
+
+    pres_in_data = pd.DataFrame({'pSig' : [pSig], 'Time': [dt.now()]})
     pres = pd.concat([pres, pres_in_data], ignore_index=True)
 
-    display_temp = temp.tail(10)
+    display_HelDis = dfHelDis.tail(10)
+    display_WO = dfWOut.tail(10)
+    display_WI = dfWIn.tail(10)
     display_pres = pres.tail(10)
 
     with tempFig.container():
-        tfig = px.line(display_temp, 'Time', 'Temp', width=500, markers={'color' : 'red'})
-        tfig.update_layout(yaxis_range=[0,100])
+        tfig = px.line(display_HelDis, 'Time', 'HelDis', width=500, title="Helium Discharge Temp")
         st.write(tfig)
+        print("written tfig")
     with presFig.container():
-        pfig = px.line(display_pres, 'Time', 'Pres', width=500, markers={'color' : 'blue'})
-        pfig.update_layout(yaxis_range=[50,500])
+        pfig = px.line(display_pres, 'Time', 'pSig', width=500, title="pSig Pressure")
         st.write(pfig)
+    with WOFig.container():
+        tfig = px.line(display_WO, 'Time', 'WOut', width=500, title="Water Out Temp")
+        st.write(tfig)
+    with WIFig.container():
+        tfig = px.line(display_WI, 'Time', 'WIn', width=500, title="Water In Temp")
+        st.write(tfig)
 
-    download_data = convert_df(pd.concat([temp, pres], ignore_index=True))
-    with downloadButton:
-        st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
 
-    sleep(1)
+    #download_data = convert_df(pd.concat([temp, pres], ignore_index=True))
+    #with downloadButton:
+    #   st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
 
+    sleep(0.01)
 
