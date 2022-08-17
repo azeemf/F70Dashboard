@@ -144,6 +144,8 @@ with st.sidebar:
         avgpresMetric = st.empty()
         WOMetric = st.empty()
         avWOMetric = st.empty()
+
+    timeSelect = st.selectbox("Select time between data acquistion cycles", ('Realtime', '1 min', '10 min', '1 hour'))    
     
     onoff = st.select_slider('Select Compressor State', options=['On', 'Off'])
     ooButton = st.button(label="Execute")
@@ -221,6 +223,16 @@ def updateFigs():
         tfig = px.line(display_WI, 'Time', 'WIn', width=500, title="Water In Temp")
         st.write(tfig)
 
+def getSleepTime():
+    if timeSelect == 'Realtime':
+        return 0.01
+    elif timeSelect == '1 min':
+        return 60
+    elif timeSelect == '10 min':
+        return 600
+    elif timeSelect == '1 hour':
+        return 3600    
+
 # Start Of Loop
 
 while 1:
@@ -250,8 +262,14 @@ while 1:
     display_pres = pres.tail(10)
 
     updateFigs()
+
+    sL = getSleepTime()
     
-    sleep(0.01)
+    try:
+        sleep(sL)
+    except KeyboardInterrupt:
+        sL = getSleepTime()
+        print("Cycle wait interrupted. New cycle time - " + str(sL) + " seconds")
 
     #download_data = convert_df(pd.concat([temp, pres], ignore_index=True))
     #with downloadButton:
