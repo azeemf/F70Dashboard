@@ -1,3 +1,4 @@
+from py_compile import PyCompileError
 from time import sleep
 import streamlit as st
 import matplotlib as mpl
@@ -11,25 +12,40 @@ from helpers import rec_response
 import os
 import time
 
-global inCom
-print(str(dt.now()) + " --- Please Select COM Port Number")
-inCom = "COM" + input()
-print(str(dt.now()) + " --- Starting...")
-
-try:
-    os.mkdir("Data")
-    newPath = os.path.join(os.getcwd(), "Data")
-    os.chdir(newPath)
-    dataPath = newPath
-    prevDay = dt.now().day
-except:
-    print(str(dt.now()))
+dataDirPath = 0
+originalPath = os.getcwd()
+prevDay = dt.now().day
+pCOM = 0
 
 st.set_page_config(
         page_title="F70 Dashboard",
         page_icon="📈",
         layout="wide",
     )
+
+#find COM.numfile in dir and change number to the COM port associated with the compressor device
+
+def findCOM():
+    global inCom
+    global pCOM
+    comFile = open("COM.numfile", "r")
+    inCom = "COM" + str(comFile.read())
+    comFile.close()
+    pCOM = inCom
+
+findCOM()
+
+print(str(dt.now()) + " --- " + pCOM + " Selected")
+
+try:
+    os.mkdir("Data")
+    newPath = os.path.join(os.getcwd(), "Data")
+    os.chdir(newPath)
+    dataDirPath = newPath
+    prevDay = dt.now().day
+except:
+    print(str(dt.now()))
+    dataDirPath = os.path.join(os.getcwd(), "Data")
 
 def CheckSerial():
     helcomp_serial_port = inCom
@@ -49,9 +65,9 @@ def CheckSerial():
         st.error("⛔ Serial Port Could Not Be Opened - Please Rerun")
         return False
 
-def Read():
+def Read(pCom):
 
-    helcomp_serial_port = inCom # may need to change, if serial port number changes
+    helcomp_serial_port = pCom # may need to change, if serial port number changes
     path = os.path.dirname(os.path.abspath(__file__)) # relative directory path
 
     # Create an instance of serial object, set serial parameters for Sumitomo F70L Helium Compressor
@@ -73,7 +89,7 @@ def Read():
     ser.write(sendstring)
     temperatures = rec_response(ser)
     time.sleep(0.05) # pause to ensure readiness
-    print(str(dt.now()) + " --- " + temperatures)
+    print(str(dt.now()) + " --- " + str(temperatures))
     temperatures = str(temperatures)
     retList = [temperatures]
 
@@ -84,7 +100,7 @@ def Read():
     ser.write(sendstring)
     pressures = rec_response(ser)
     time.sleep(0.05) # pause to ensure readiness
-    print(str(dt.now()) + " --- " + pressures)
+    print(str(dt.now()) + " --- " + str(pressures))
     pressures = str(pressures)
     retList.append(pressures)
 
@@ -98,7 +114,7 @@ def Read():
     ser.close()
 
     # interpret status bytes
-    print(str(dt.now()) + " --- " + status)
+    print(str(dt.now()) + " --- " + str(status))
 
     retList.append(status)
 
@@ -107,6 +123,8 @@ def Read():
 @st.cache
 def convert_df(df):
    return df.to_csv().encode('utf-8')
+
+os.chdir(str(originalPath)) 
 
 st.title("F-70H Compressor Monitoring Dashboard")
 status = st.empty()
@@ -124,11 +142,12 @@ with st.expander("Overview"):
         if CheckSerial() == True:
             oText = st.write("Online - " + inCom + ": 🟢")
 
-            serData = Read()
-            HelDis = int(serData[0][7:10])
-            WOut = int(serData[0][11:14])
-            WIn = int(serData[0][15:18])
-            pSig = int(serData[1][7:10])
+            #serData = Read()
+
+            HelDis = 54
+            WOut = 50
+            WIn = 21
+            pSig = 100
 
             dfHelDis = pd.DataFrame({'HelDis' : [HelDis], 'Time': [dt.now()]})
             dfWIn = pd.DataFrame({'WIn' : [WIn], 'Time': [dt.now()]})
@@ -205,6 +224,12 @@ def updateMetrics():
     avgpresMetric.metric("Average Pressure", pres['pSig'].mean())
 
 def updatePd():
+
+    global dfHelDis
+    global dfWIn
+    global dfWOut
+    global pres
+
     temp_in_data = pd.DataFrame({'HelDis' : [HelDis], 'Time': [dt.now()]})
     dfHelDis = pd.concat([dfHelDis, temp_in_data], ignore_index=True)
 
@@ -241,33 +266,53 @@ def getSleepTime():
     elif timeSelect == '1 hour':
         return 3600    
 
-def dayCheck():
-    if prevDay != dt.now().day:
+def dayCheck(pD):
+    if pD != dt.now().day:
         print(str(dt.now()) + " --- New Day")
         newDay()
     else:
         pass
 
-def newDay():
-    os.chdir(dataPath)
-    os.mkdir(dt.now().strftime('%Y%m%d'))
+def newDay(ddp):
+    os.chdir(str(ddp))
+    try:
+        os.mkdir(dt.now().strftime('%Y%m%d'))
+    except:
+        pass
     os.chdir(dt.now().strftime('%Y%m%d'))
 
 def saveData():
     pass
 
+def shutdownSeq():
+    while 1:
+        print("SHUTDOWN")
+        sleep(1)
+
+def checkOOStatus(oo):
+    if onoff == 'Off':
+        shutdownSeq()
+    else:
+        pass
+
 # Start Of Loop
 
-newDay()
+newDay(dataDirPath)
 
 while 1:
+
+    checkOOStatus(onoff)
+
     status.write("Ready")
+
+    os.chdir(originalPath)
+
     prevHelDis = HelDis
     prevWOut = WOut
     prevWIn = WIn
     prevpSig = pSig
 
-    serData = Read()
+    serData = Read(pCOM)
     sWarning = st.empty()
     HelDis = int(serData[0][7:10])
     WOut = int(serData[0][11:14])
@@ -287,7 +332,7 @@ while 1:
 
     updateFigs()
 
-    dayCheck()
+    dayCheck(prevDay)
 
     sL = getSleepTime()
     
