@@ -180,6 +180,47 @@ with bcol2:
 
 sWarning = st.empty()
 
+def updateMetrics():
+    HelDisMetric.metric("Live Helium Discharge Temp", value = str(HelDis) + " °C", delta=HelDis - prevHelDis)
+    avHelDisMetric.metric("Average Helium Discharge Temp", dfHelDis['HelDis'].mean())
+
+    WOMetric.metric("Live Water Out Temp", value = str(WOut) + " °C", delta=WOut - prevWOut)
+    avWOMetric.metric("Average Water Out Temp", dfWOut['WOut'].mean())
+
+    WIMetric.metric("Live Water In Temp", value = str(WIn) + " °C", delta=WIn - prevWIn)
+    avWIMetric.metric("Average Water In Temp", dfWIn['WIn'].mean())
+
+    presMetric.metric("Live Pressure", value = str(pSig) + " PSI", delta=pSig - prevpSig)
+    avgpresMetric.metric("Average Pressure", pres['pSig'].mean())
+
+def updatePd():
+    temp_in_data = pd.DataFrame({'HelDis' : [HelDis], 'Time': [dt.now()]})
+    dfHelDis = pd.concat([dfHelDis, temp_in_data], ignore_index=True)
+
+    temp_in_data = pd.DataFrame({'WIn' : [WIn], 'Time': [dt.now()]})
+    dfWIn = pd.concat([dfWIn, temp_in_data], ignore_index=True)
+
+    temp_in_data = pd.DataFrame({'WOut' : [WOut], 'Time': [dt.now()]})
+    dfWOut = pd.concat([dfWOut, temp_in_data], ignore_index=True)
+
+    pres_in_data = pd.DataFrame({'pSig' : [pSig], 'Time': [dt.now()]})
+    pres = pd.concat([pres, pres_in_data], ignore_index=True)
+
+def updateFigs():
+    with tempFig.container():
+        tfig = px.line(display_HelDis, 'Time', 'HelDis', width=500, title="Helium Discharge Temp")
+        st.write(tfig)
+        print("written tfig")
+    with presFig.container():
+        pfig = px.line(display_pres, 'Time', 'pSig', width=500, title="pSig Pressure")
+        st.write(pfig)
+    with WOFig.container():
+        tfig = px.line(display_WO, 'Time', 'WOut', width=500, title="Water Out Temp")
+        st.write(tfig)
+    with WIFig.container():
+        tfig = px.line(display_WI, 'Time', 'WIn', width=500, title="Water In Temp")
+        st.write(tfig)
+
 # Start Of Loop
 
 while 1:
@@ -199,53 +240,20 @@ while 1:
 
     timeh.text(str(dt.now()))
 
-    HelDisMetric.metric("Live Helium Discharge Temp", value = str(HelDis) + " °C", delta=HelDis - prevHelDis)
-    avHelDisMetric.metric("Average Helium Discharge Temp", dfHelDis['HelDis'].mean())
+    updateMetrics()
 
-    WOMetric.metric("Live Water Out Temp", value = str(WOut) + " °C", delta=WOut - prevWOut)
-    avWOMetric.metric("Average Water Out Temp", dfWOut['WOut'].mean())
-
-    WIMetric.metric("Live Water In Temp", value = str(WIn) + " °C", delta=WIn - prevWIn)
-    avWIMetric.metric("Average Water In Temp", dfWIn['WIn'].mean())
-
-    presMetric.metric("Live Pressure", value = str(pSig) + " PSI", delta=pSig - prevpSig)
-    avgpresMetric.metric("Average Pressure", pres['pSig'].mean())
-
-    temp_in_data = pd.DataFrame({'HelDis' : [HelDis], 'Time': [dt.now()]})
-    dfHelDis = pd.concat([dfHelDis, temp_in_data], ignore_index=True)
-
-    temp_in_data = pd.DataFrame({'WIn' : [WIn], 'Time': [dt.now()]})
-    dfWIn = pd.concat([dfWIn, temp_in_data], ignore_index=True)
-
-    temp_in_data = pd.DataFrame({'WOut' : [WOut], 'Time': [dt.now()]})
-    dfWOut = pd.concat([dfWOut, temp_in_data], ignore_index=True)
-
-    pres_in_data = pd.DataFrame({'pSig' : [pSig], 'Time': [dt.now()]})
-    pres = pd.concat([pres, pres_in_data], ignore_index=True)
+    updatePd()
 
     display_HelDis = dfHelDis.tail(10)
     display_WO = dfWOut.tail(10)
     display_WI = dfWIn.tail(10)
     display_pres = pres.tail(10)
 
-    with tempFig.container():
-        tfig = px.line(display_HelDis, 'Time', 'HelDis', width=500, title="Helium Discharge Temp")
-        st.write(tfig)
-        print("written tfig")
-    with presFig.container():
-        pfig = px.line(display_pres, 'Time', 'pSig', width=500, title="pSig Pressure")
-        st.write(pfig)
-    with WOFig.container():
-        tfig = px.line(display_WO, 'Time', 'WOut', width=500, title="Water Out Temp")
-        st.write(tfig)
-    with WIFig.container():
-        tfig = px.line(display_WI, 'Time', 'WIn', width=500, title="Water In Temp")
-        st.write(tfig)
-
+    updateFigs()
+    
+    sleep(0.01)
 
     #download_data = convert_df(pd.concat([temp, pres], ignore_index=True))
     #with downloadButton:
     #   st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
-
-    sleep(0.01)
 
