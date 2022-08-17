@@ -145,6 +145,9 @@ with st.sidebar:
         WOMetric = st.empty()
         avWOMetric = st.empty()
     
+    onoff = st.select_slider('Select Compressor State', options=['On', 'Off'])
+    ooButton = st.button(label="Execute")
+    
 
 figcol1, figcol2 = st.columns(2)
 
