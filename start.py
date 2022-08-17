@@ -12,9 +12,9 @@ import os
 import time
 
 global inCom
-print("Please Select COM Port Number")
+print(str(dt.now()) + " --- Please Select COM Port Number")
 inCom = "COM" + input()
-print("Starting...")
+print(str(dt.now()) + " --- Starting...")
 
 st.set_page_config(
         page_title="F70 Dashboard",
@@ -64,7 +64,7 @@ def Read():
     ser.write(sendstring)
     temperatures = rec_response(ser)
     time.sleep(0.05) # pause to ensure readiness
-    print(temperatures)
+    print(str(dt.now()) + " --- " + temperatures)
     temperatures = str(temperatures)
     retList = [temperatures]
 
@@ -75,7 +75,7 @@ def Read():
     ser.write(sendstring)
     pressures = rec_response(ser)
     time.sleep(0.05) # pause to ensure readiness
-    print(pressures)
+    print(str(dt.now()) + " --- " + pressures)
     pressures = str(pressures)
     retList.append(pressures)
 
@@ -89,7 +89,7 @@ def Read():
     ser.close()
 
     # interpret status bytes
-    print(status)
+    print(str(dt.now()) + " --- " + status)
 
     retList.append(status)
 
@@ -212,7 +212,6 @@ def updateFigs():
     with tempFig.container():
         tfig = px.line(display_HelDis, 'Time', 'HelDis', width=500, title="Helium Discharge Temp")
         st.write(tfig)
-        print("written tfig")
     with presFig.container():
         pfig = px.line(display_pres, 'Time', 'pSig', width=500, title="pSig Pressure")
         st.write(pfig)
@@ -244,7 +243,6 @@ while 1:
 
     serData = Read()
     sWarning = st.empty()
-    print("out of read")
     HelDis = int(serData[0][7:10])
     WOut = int(serData[0][11:14])
     WIn = int(serData[0][15:18])
@@ -269,7 +267,7 @@ while 1:
         sleep(sL)
     except KeyboardInterrupt:
         sL = getSleepTime()
-        print("Cycle wait interrupted. New cycle time - " + str(sL) + " seconds")
+        print(str(dt.now()) + " --- " + "Cycle wait interrupted. New cycle time - " + str(sL) + " seconds")
 
     #download_data = convert_df(pd.concat([temp, pres], ignore_index=True))
     #with downloadButton:
