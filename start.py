@@ -16,6 +16,15 @@ print(str(dt.now()) + " --- Please Select COM Port Number")
 inCom = "COM" + input()
 print(str(dt.now()) + " --- Starting...")
 
+try:
+    os.mkdir("Data")
+    newPath = os.path.join(os.getcwd(), "Data")
+    os.chdir(newPath)
+    dataPath = newPath
+    prevDay = dt.now().day
+except:
+    print(str(dt.now()))
+
 st.set_page_config(
         page_title="F70 Dashboard",
         page_icon="📈",
@@ -232,7 +241,24 @@ def getSleepTime():
     elif timeSelect == '1 hour':
         return 3600    
 
+def dayCheck():
+    if prevDay != dt.now().day:
+        print(str(dt.now()) + " --- New Day")
+        newDay()
+    else:
+        pass
+
+def newDay():
+    os.chdir(dataPath)
+    os.mkdir(dt.now().strftime('%Y%m%d'))
+    os.chdir(dt.now().strftime('%Y%m%d'))
+
+def saveData():
+    pass
+
 # Start Of Loop
+
+newDay()
 
 while 1:
     status.write("Ready")
@@ -260,6 +286,8 @@ while 1:
     display_pres = pres.tail(10)
 
     updateFigs()
+
+    dayCheck()
 
     sL = getSleepTime()
     
