@@ -25,6 +25,8 @@ st.set_page_config(
 
 #find COM.numfile in dir and change number to the COM port associated with the compressor device
 
+alertMessage = st.empty()
+
 def findCOM():
     global inCom
     global pCOM
@@ -175,6 +177,7 @@ with st.sidebar:
 
     timeSelect = st.selectbox("Select time between data acquistion cycles", ('Realtime', '1 min', '10 min', '1 hour'))    
     
+    st.write("NOTE - Please do not use compressor state switch as off yet...")
     onoff = st.select_slider('Select Compressor State', options=['On', 'Off'])
     ooButton = st.button(label="Execute")
     
