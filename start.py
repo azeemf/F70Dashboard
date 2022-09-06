@@ -277,7 +277,17 @@ def dayCheck(pD):
         pass
 
 def newDay(ddp):
+
+    global dfHelDis
+    global dfWIn
+    global dfWOut
+    global pres
+    dfHelDis.to_csv(index=False)
+    dfWIn.to_csv(index=False)
+    dfWOut.to_csv(index=False)
+    pres.to_csv(index=False)
     os.chdir(str(ddp))
+    
     try:
         os.mkdir(dt.now().strftime('%Y%m%d'))
     except:
@@ -340,6 +350,7 @@ while 1:
     sL = getSleepTime()
     
     try:
+        status.write("Waiting for " + str(sL) + " secs")
         sleep(sL)
     except KeyboardInterrupt:
         sL = getSleepTime()
