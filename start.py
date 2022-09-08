@@ -1,3 +1,4 @@
+from py_compile import PyCompileError
 from time import sleep
 import streamlit as st
 import matplotlib as mpl
@@ -11,16 +12,42 @@ from helpers import rec_response
 import os
 import time
 
-global inCom
-print("Please Select COM Port Number")
-inCom = "COM" + input()
-print("Starting...")
+dataDirPath = 0
+originalPath = os.getcwd()
+prevDay = dt.now().day
+pCOM = 0
 
 st.set_page_config(
         page_title="F70 Dashboard",
         page_icon="📈",
         layout="wide",
     )
+
+#find COM.numfile in dir and change number to the COM port associated with the compressor device
+
+alertMessage = st.empty()
+
+def findCOM():
+    global inCom
+    global pCOM
+    comFile = open("COM.numfile", "r")
+    inCom = "COM" + str(comFile.read())
+    comFile.close()
+    pCOM = inCom
+
+findCOM()
+
+print(str(dt.now()) + " --- " + pCOM + " Selected")
+
+try:
+    os.mkdirs("Data")
+    newPath = os.path.join(os.getcwd(), "Data")
+    os.chdir(newPath)
+    dataDirPath = newPath
+    prevDay = dt.now().day
+except:
+    print(str(dt.now()))
+    dataDirPath = os.path.join(os.getcwd(), "Data")
 
 def CheckSerial():
     helcomp_serial_port = inCom
@@ -40,9 +67,9 @@ def CheckSerial():
         st.error("⛔ Serial Port Could Not Be Opened - Please Rerun")
         return False
 
-def Read():
+def Read(pCom):
 
-    helcomp_serial_port = inCom # may need to change, if serial port number changes
+    helcomp_serial_port = pCom # may need to change, if serial port number changes
     path = os.path.dirname(os.path.abspath(__file__)) # relative directory path
 
     # Create an instance of serial object, set serial parameters for Sumitomo F70L Helium Compressor
@@ -64,7 +91,7 @@ def Read():
     ser.write(sendstring)
     temperatures = rec_response(ser)
     time.sleep(0.05) # pause to ensure readiness
-    print(temperatures)
+    print(str(dt.now()) + " --- " + str(temperatures))
     temperatures = str(temperatures)
     retList = [temperatures]
 
@@ -75,7 +102,7 @@ def Read():
     ser.write(sendstring)
     pressures = rec_response(ser)
     time.sleep(0.05) # pause to ensure readiness
-    print(pressures)
+    print(str(dt.now()) + " --- " + str(pressures))
     pressures = str(pressures)
     retList.append(pressures)
 
@@ -89,7 +116,7 @@ def Read():
     ser.close()
 
     # interpret status bytes
-    print(status)
+    print(str(dt.now()) + " --- " + str(status))
 
     retList.append(status)
 
@@ -98,6 +125,8 @@ def Read():
 @st.cache
 def convert_df(df):
    return df.to_csv().encode('utf-8')
+
+os.chdir(str(originalPath)) 
 
 st.title("F-70H Compressor Monitoring Dashboard")
 status = st.empty()
@@ -115,11 +144,12 @@ with st.expander("Overview"):
         if CheckSerial() == True:
             oText = st.write("Online - " + inCom + ": 🟢")
 
-            serData = Read()
-            HelDis = int(serData[0][7:10])
-            WOut = int(serData[0][11:14])
-            WIn = int(serData[0][15:18])
-            pSig = int(serData[1][7:10])
+            #serData = Read()
+
+            HelDis = 54
+            WOut = 50
+            WIn = 21
+            pSig = 100
 
             dfHelDis = pd.DataFrame({'HelDis' : [HelDis], 'Time': [dt.now()]})
             dfWIn = pd.DataFrame({'WIn' : [WIn], 'Time': [dt.now()]})
@@ -144,6 +174,12 @@ with st.sidebar:
         avgpresMetric = st.empty()
         WOMetric = st.empty()
         avWOMetric = st.empty()
+
+    timeSelect = st.selectbox("Select time between data acquistion cycles", ('Realtime', '1 min', '10 min', '1 hour'))    
+    
+    st.write("NOTE - Please do not use compressor state switch as off yet...")
+    onoff = st.select_slider('Select Compressor State', options=['On', 'Off'])
+    ooButton = st.button(label="Execute")
     
 
 figcol1, figcol2 = st.columns(2)
@@ -177,25 +213,7 @@ with bcol2:
 
 sWarning = st.empty()
 
-# Start Of Loop
-
-while 1:
-    status.write("Ready")
-    prevHelDis = HelDis
-    prevWOut = WOut
-    prevWIn = WIn
-    prevpSig = pSig
-
-    serData = Read()
-    sWarning = st.empty()
-    print("out of read")
-    HelDis = int(serData[0][7:10])
-    WOut = int(serData[0][11:14])
-    WIn = int(serData[0][15:18])
-    pSig = int(serData[1][7:10])
-
-    timeh.text(str(dt.now()))
-
+def updateMetrics():
     HelDisMetric.metric("Live Helium Discharge Temp", value = str(HelDis) + " °C", delta=HelDis - prevHelDis)
     avHelDisMetric.metric("Average Helium Discharge Temp", dfHelDis['HelDis'].mean())
 
@@ -207,6 +225,13 @@ while 1:
 
     presMetric.metric("Live Pressure", value = str(pSig) + " PSI", delta=pSig - prevpSig)
     avgpresMetric.metric("Average Pressure", pres['pSig'].mean())
+
+def updatePd():
+
+    global dfHelDis
+    global dfWIn
+    global dfWOut
+    global pres
 
     temp_in_data = pd.DataFrame({'HelDis' : [HelDis], 'Time': [dt.now()]})
     dfHelDis = pd.concat([dfHelDis, temp_in_data], ignore_index=True)
@@ -220,15 +245,10 @@ while 1:
     pres_in_data = pd.DataFrame({'pSig' : [pSig], 'Time': [dt.now()]})
     pres = pd.concat([pres, pres_in_data], ignore_index=True)
 
-    display_HelDis = dfHelDis.tail(10)
-    display_WO = dfWOut.tail(10)
-    display_WI = dfWIn.tail(10)
-    display_pres = pres.tail(10)
-
+def updateFigs():
     with tempFig.container():
         tfig = px.line(display_HelDis, 'Time', 'HelDis', width=500, title="Helium Discharge Temp")
         st.write(tfig)
-        print("written tfig")
     with presFig.container():
         pfig = px.line(display_pres, 'Time', 'pSig', width=500, title="pSig Pressure")
         st.write(pfig)
@@ -239,10 +259,104 @@ while 1:
         tfig = px.line(display_WI, 'Time', 'WIn', width=500, title="Water In Temp")
         st.write(tfig)
 
+def getSleepTime():
+    if timeSelect == 'Realtime':
+        return 0.01
+    elif timeSelect == '1 min':
+        return 60
+    elif timeSelect == '10 min':
+        return 600
+    elif timeSelect == '1 hour':
+        return 3600    
+
+def dayCheck(pD):
+    global dataDirPath
+    if pD != dt.now().day:
+        print(str(dt.now()) + " --- New Day")
+        newDay(dataDirPath)
+    else:
+        pass
+
+def newDay(ddp):
+
+    os.chdir(str(ddp))
+    
+    try:
+       # os.mkdirs(dt.now())
+        os.mkdirs(dt.now().strftime('%Y%m%d'))
+        print("dir made")
+    except:
+        pass
+    os.chdir(dt.now().strftime('%Y%m%d'))
+
+def saveData():
+    pass
+
+def shutdownSeq():
+    while 1:
+        print("SHUTDOWN")
+        sleep(1)
+
+def checkOOStatus(oo):
+    if onoff == 'Off':
+        shutdownSeq()
+    else:
+        pass
+
+# Start Of Loop
+
+newDay(dataDirPath)
+
+while 1:
+
+    checkOOStatus(onoff)
+
+    status.write("Ready")
+
+    os.chdir(originalPath)
+
+    prevHelDis = HelDis
+    prevWOut = WOut
+    prevWIn = WIn
+    prevpSig = pSig
+    prevDay = dt.now().day
+
+    serData = Read(pCOM)
+    sWarning = st.empty()
+    HelDis = int(serData[0][7:10])
+    WOut = int(serData[0][11:14])
+    WIn = int(serData[0][15:18])
+    pSig = int(serData[1][7:10])
+
+    timeh.text(str(dt.now()))
+
+    updateMetrics()
+
+    updatePd()
+
+    display_HelDis = dfHelDis.tail(10)
+    display_WO = dfWOut.tail(10)
+    display_WI = dfWIn.tail(10)
+    display_pres = pres.tail(10)
+
+    updateFigs()
+
+    dfHelDis.to_csv(index=False)
+    dfWIn.to_csv(index=False)
+    dfWOut.to_csv(index=False)
+    pres.to_csv(index=False)
+
+    dayCheck(prevDay)
+
+    sL = getSleepTime()
+    
+    try:
+        status.write("Waiting for " + str(sL) + " secs")
+        sleep(sL)
+    except KeyboardInterrupt:
+        sL = getSleepTime()
+        print(str(dt.now()) + " --- " + "Cycle wait interrupted. New cycle time - " + str(sL) + " seconds")
 
     #download_data = convert_df(pd.concat([temp, pres], ignore_index=True))
     #with downloadButton:
     #   st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
-
-    sleep(0.01)
-
