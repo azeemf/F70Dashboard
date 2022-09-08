@@ -40,7 +40,7 @@ findCOM()
 print(str(dt.now()) + " --- " + pCOM + " Selected")
 
 try:
-    os.mkdir("Data")
+    os.mkdirs("Data")
     newPath = os.path.join(os.getcwd(), "Data")
     os.chdir(newPath)
     dataDirPath = newPath
@@ -270,26 +270,21 @@ def getSleepTime():
         return 3600    
 
 def dayCheck(pD):
+    global dataDirPath
     if pD != dt.now().day:
         print(str(dt.now()) + " --- New Day")
-        newDay()
+        newDay(dataDirPath)
     else:
         pass
 
 def newDay(ddp):
 
-    global dfHelDis
-    global dfWIn
-    global dfWOut
-    global pres
-    dfHelDis.to_csv(index=False)
-    dfWIn.to_csv(index=False)
-    dfWOut.to_csv(index=False)
-    pres.to_csv(index=False)
     os.chdir(str(ddp))
     
     try:
-        os.mkdir(dt.now().strftime('%Y%m%d'))
+       # os.mkdirs(dt.now())
+        os.mkdirs(dt.now().strftime('%Y%m%d'))
+        print("dir made")
     except:
         pass
     os.chdir(dt.now().strftime('%Y%m%d'))
@@ -324,6 +319,7 @@ while 1:
     prevWOut = WOut
     prevWIn = WIn
     prevpSig = pSig
+    prevDay = dt.now().day
 
     serData = Read(pCOM)
     sWarning = st.empty()
@@ -345,6 +341,11 @@ while 1:
 
     updateFigs()
 
+    dfHelDis.to_csv(index=False)
+    dfWIn.to_csv(index=False)
+    dfWOut.to_csv(index=False)
+    pres.to_csv(index=False)
+
     dayCheck(prevDay)
 
     sL = getSleepTime()
@@ -359,4 +360,3 @@ while 1:
     #download_data = convert_df(pd.concat([temp, pres], ignore_index=True))
     #with downloadButton:
     #   st.download_button("Download Data", data=download_data, file_name="F70Data.csv")
-
